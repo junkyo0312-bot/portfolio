@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Junkyo Seo · Structural Analysis Lab, SNU</title>
+  <link rel="stylesheet" href="colors_and_type.css">
+  <style>
+    html, body { background: var(--canvas); }
+    body { min-height: 100vh; }
+    section { position: relative; }
+    * { box-sizing: border-box; }
+
+    /* range input — match the Orbit feel */
+    input[type="range"] {
+      -webkit-appearance: none;
+      height: 4px;
+      background: var(--border-soft);
+      border-radius: 999px;
+      outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--ink);
+      border: 2px solid #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      cursor: grab;
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--ink);
+      border: 2px solid #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      cursor: grab;
+    }
+
+    /* button transitions */
+    .btn { transition: opacity 200ms cubic-bezier(0.2,0.8,0.2,1), transform 120ms ease; }
+    .btn:hover { opacity: 0.85; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+  <script type="text/babel" src="components/Nav.jsx"></script>
+  <script type="text/babel" src="components/Hero.jsx"></script>
+  <script type="text/babel" src="components/Projects.jsx"></script>
+  <script type="text/babel" src="components/Research.jsx"></script>
+  <script type="text/babel" src="components/Publications.jsx"></script>
+  <script type="text/babel" src="components/Education.jsx"></script>
+  <script type="text/babel" src="components/Footer.jsx"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+      "accent": "rust",
+      "showWatermarks": true,
+      "showInteractiveChart": true
+    }/*EDITMODE-END*/;
+
+    const ACCENT_MAP = {
+      rust:  { primary: '#CF4500', secondary: '#F37338', clay: '#9A3A0A' },
+      amber: { primary: '#F37338', secondary: '#FFA86A', clay: '#CF4500' },
+      ink:   { primary: '#141413', secondary: '#565656', clay: '#262627' },
+    };
+
+    function App() {
+      const [openProject, setOpenProject] = useState(null);
+      const [active, setActive] = useState('about');
+      const [tweaks, setTweak] = useTweaks(TWEAK_DEFAULTS);
+
+      // Apply accent
+      useEffect(() => {
+        const a = ACCENT_MAP[tweaks.accent] || ACCENT_MAP.rust;
+        document.documentElement.style.setProperty('--orbit-rust', a.primary);
+        document.documentElement.style.setProperty('--orbit-amber', a.secondary);
+        document.documentElement.style.setProperty('--orbit-clay', a.clay);
+      }, [tweaks.accent]);
+
+      // Active section tracking
+      useEffect(() => {
+        const ids = ['top', 'projects', 'research', 'education', 'contact'];
+        const map = { top: 'about', projects: 'projects', research: 'research',
+                      education: 'education', contact: 'contact' };
+        const obs = new IntersectionObserver((entries) => {
+          entries.forEach(e => {
+            if (e.isIntersecting) setActive(map[e.target.id] || 'about');
+          });
+        }, { rootMargin: '-40% 0px -55% 0px' });
+        ids.forEach(id => {
+          const el = document.getElementById(id);
+          if (el) obs.observe(el);
+        });
+        return () => obs.disconnect();
+      }, []);
+
+      const jump = (id) => {
+        const el = document.getElementById(id === 'about' ? 'top' : id);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      };
+
+      return (
+        <>
+          <Nav active={active} onJump={jump}/>
+          <Hero onJump={jump}/>
+          <Projects onOpen={setOpenProject}/>
+          {tweaks.showInteractiveChart && <Research/>}
+          <Publications/>
+          <Education/>
+          <Footer/>
+
+          <ProjectModal projectKey={openProject}
+            onClose={() => setOpenProject(null)}/>
+
+          <TweaksPanel title="Tweaks" defaultPosition={{ right: 24, bottom: 24 }}>
+            <TweakSection title="Accent">
+              <TweakRadio
+                value={tweaks.accent}
+                onChange={(v) => setTweak('accent', v)}
+                options={[
+                  { value: 'rust',  label: 'Rust' },
+                  { value: 'amber', label: 'Amber' },
+                  { value: 'ink',   label: 'Ink' },
+                ]}/>
+            </TweakSection>
+            <TweakSection title="Sections">
+              <TweakToggle
+                label="Show research deep-dive"
+                value={tweaks.showInteractiveChart}
+                onChange={(v) => setTweak('showInteractiveChart', v)}/>
+            </TweakSection>
+          </TweaksPanel>
+        </>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
