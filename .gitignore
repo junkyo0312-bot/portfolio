@@ -1,0 +1,10 @@
+# Source PDFs (not deployed)
+uploads/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
